@@ -8,187 +8,94 @@ public static class Program
 	public static void Main(string[] args)
 	{
 		Console.WriteLine("Hello, World!");
-		Day1.Part2();
+		Console.WriteLine(Day2.Eval(Day2.parse(File.ReadAllLines(@"..\..\..\day2"))));
+		;
 	}
 
-	public class Day1
+}
+
+public class Day2
+{
+
+	public const int MAX_RED   = 12;
+	public const int MAX_GREEN = 13;
+	public const int MAX_BLUE  = 14;
+
+	public record Game(int Id, GameSubset[] subsets);
+
+	public record GameSubset(int r, int g, int b);
+
+	public static Game[] parse(string[] lines)
 	{
+		var games = new List<Game>();
 
-		private static readonly string[] NumNames = new[]
-			{ "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
+		foreach (string line in lines) {
 
-		public static void Part1()
-		{
-			var lines = File.ReadAllLines(@"..\..\..\day1");
-			int sum   = Sum(lines);
+			var spl     = line.Split(':');
+			var id      = spl[0].Split(' ')[1];
+			var subs    = spl[1].Split(';');
+			var subsets = new List<GameSubset>();
 
-			Console.WriteLine(sum);
-		}
+			foreach (var sub in subs) {
 
-		private static int Sum(string[] lines)
-		{
-			var sum = 0;
+				var rgb = sub.Split(',');
+				int r   = 0, g = 0, b = 0;
 
-			foreach (var line in lines) {
-				var    rg            = line.Where(char.IsNumber).ToArray();
-				char   lastOrDefault = rg.LastOrDefault();
-				string ns            = new(rg.First() + (lastOrDefault == default ? "" : lastOrDefault.ToString()));
-				sum += int.Parse(ns);
-				Console.WriteLine($"{line} {ns}");
+				foreach (string s in rgb) {
+					var ss    = s.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+					var color = ss[1];
+					var qty   = int.Parse(ss[0]);
 
-			}
+					if (color == "red") {
+						r = qty;
+					}
 
-			return sum;
-		}
+					if (color == "green") {
+						g = qty;
+					}
 
-		public static void Part2()
-		{
-			var lines = File.ReadAllLines(@"..\..\..\day1");
-			var s     = CalculateTotalSum(lines);
-			Console.WriteLine(s);
-		}
-
-		public static void Part2b()
-		{
-			// var lines = File.ReadAllLines(@"..\..\..\day1");
-			/*var lines = """
-			            two1nine
-			            eightwothree
-			            abcone2threexyz
-			            xtwone3four
-			            4nineeightseven2
-			            zoneight234
-			            7pqrstsixteen
-			            """.Split("\r\n");*/
-			var lines = File.ReadAllLines(@"..\..\..\day1");
-
-			var numNames2 = (1..9);
-			var sum       = 0;
-
-			foreach (string line in lines) {
-				var dict = new List<KeyValuePair<string, int>>();
-
-				for (int i = 0; i < NumNames.Length; i++) {
-					string? name = NumNames[i];
-					var     of   = line.IndexOfAll(name);
-
-					foreach (int i1 in of) {
-						if (i1 != -1) {
-							// dict[of]   = name;
-							dict.Add(new(name, i1));
-
-						}
-
+					if (color == "blue") {
+						b = qty;
 					}
 				}
 
-				for (int i = 1; i <= 9; i++) {
-					string? name = i.ToString();
-					var     of   = line.IndexOfAll(name);
-
-					foreach (int i1 in of) {
-						if (i1 != -1) {
-							// dict[of]   = name;
-							dict.Add(new(name, i1));
-
-						}
-
-					}
-				}
-
-				var max = dict.MaxBy(x => x.Value);
-				var min = dict.MinBy(x => x.Value);
-
-				var key = I(min.Key).ToString();
-
-				if (min.Value != max.Value) {
-					key += I(max.Key);
-				}
-
-				sum += int.Parse($"{key}");
-				Console.WriteLine($"{line} {max} {min} {key}");
-
+				var gss = new GameSubset(r, g, b);
+				subsets.Add(gss);
+				Console.WriteLine(gss);
 			}
 
-			Console.WriteLine(sum);
+			var game = new Game(int.Parse(id), subsets.ToArray());
+			Console.WriteLine(game);
+			games.Add(game);
 
+			// var game = new Game(int.Parse(id), new[] { });
 		}
 
-		private static int I(string k)
-		{
-			string[] numNames;
-			int      d = Array.IndexOf(NumNames, k);
+		return games.ToArray();
+	}
 
-			if (d == -1) {
-				d = int.Parse(k);
-			}
-			else {
-				d += 1;
-			}
+	public static int Eval(Game[] games)
+	{
+		var pg = new List<Game>();
 
-			return d;
-		}
+		foreach (var game in games) {
+			bool isp = true;
 
-		static int CalculateTotalSum(string[] lines)
-		{
-			var numberMap = new Dictionary<string, string>
-			{
-				{ "zero", "0" }, { "one", "1" }, { "two", "2" }, { "three", "3" }, { "four", "4" },
-				{ "five", "5" }, { "six", "6" }, { "seven", "7" }, { "eight", "8" }, { "nine", "9" }
-			};
+			foreach (GameSubset subset in game.subsets) {
+				var (r, g, b) = subset;
 
-			int totalSum = 0;
-
-			foreach (var line in lines) {
-				string firstDigit = FindDigit(line, numberMap, true);
-				string lastDigit  = FindDigit(line, numberMap, false);
-
-				if (!string.IsNullOrEmpty(firstDigit) && !string.IsNullOrEmpty(lastDigit)) {
-					totalSum += int.Parse(firstDigit + lastDigit);
+				if (r > MAX_RED || g > MAX_GREEN || b > MAX_BLUE) {
+					isp = false;
+					break;
 				}
 			}
 
-			return totalSum;
+			if (isp) {
+				pg.Add(game);
+			}
 		}
 
-		static string FindDigit(string line, Dictionary<string, string> numberMap, bool searchFromStart)
-		{
-			string current = "";
-
-			if (searchFromStart) {
-				foreach (char c in line) {
-					if (char.IsDigit(c)) {
-						return c.ToString();
-					}
-
-					current += c;
-
-					foreach (var entry in numberMap) {
-						if (current.EndsWith(entry.Key)) {
-							return entry.Value;
-						}
-					}
-				}
-			}
-			else {
-				for (int i = line.Length - 1; i >= 0; i--) {
-					if (char.IsDigit(line[i])) {
-						return line[i].ToString();
-					}
-
-					current = line[i] + current;
-
-					foreach (var entry in numberMap) {
-						if (current.StartsWith(entry.Key)) {
-							return entry.Value;
-						}
-					}
-				}
-			}
-
-			return "";
-		}
-
+		return pg.Sum(x => x.Id); //
 	}
 
 }
